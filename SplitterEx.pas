@@ -1,12 +1,39 @@
-// Extended version of TSplitter that has clickable area and able to toggle visibility
-// of linked control
-// (c) Fr0sT
+(*
+  Extended version of TSplitter that has clickable area and able to toggle visibility
+  of linked control
+  (c) Fr0sT
+
+  Properties
+    * ToggleControl: TControl - linked control that will be toggled on splitter click
+    * ResizeControl: TControl - (optional) control that will be resized too on splitter click.
+        If ToggleControl.Align = alClient and this property is not set, ToggleControl.Parent will be resized.
+        Set this property to resize other control or if ToggleControl.Align <> alClient.
+    * DenyDrag: Boolean - (optional) if True, splitter will ignore mouse dragging (if you want only toggle and not resize)
+        You must change Splitter.Cursor to default one by yourself.
+    * HotColor: TColor - (optional) color a Splitter will have when a mouse is over.
+
+  Methods:
+    * Toggle - toggle the control
+    * SetImages - Init click image and calculate click area from image's dimensions
+
+  Usage:
+    type
+      TSplitter = class(TSplitterEx); // magic!
+
+      TForm1 = class(TForm)
+        ...
+        Splitter1: TSplitter;
+      end;
+
+      Splitter1.SetImages(...)
+      Splitter1.ToggleControl := ...
+*)
 
 unit SplitterEx;
 
 interface
 
-uses Windows, Messages, Graphics, Classes, Controls, ExtCtrls;
+uses Windows, Messages, Graphics, Classes, Controls, ExtCtrls, SysUtils;
 
 type
   TSplitterEx = class(ExtCtrls.TSplitter)
@@ -14,8 +41,9 @@ type
     // fields to init
     FImages: array[Boolean] of TImage;
     FHotColor: TColor;
-    FToggleControl: TControl;       // linked control that will be toggled on splitter click
-    FDenyDrag: Boolean;             // if True, splitter will ignore mouse dragging (for case when FToggleControl.Align is alClient)
+    FToggleControl: TControl;       
+    FResizeControl: TControl;       
+    FDenyDrag: Boolean;
     // runtime props
     FClickArea: TRect;              // coords of button image on the splitter
     FSaveControlSize: Integer;      // previous dimension (Height/Width) of linked control
@@ -28,26 +56,33 @@ type
     // internal methods
     procedure CMMouseEnter(var Message: TMessage); message CM_MOUSEENTER;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
-  public
+    procedure CalcClickArea;
+  protected
     // overrides
     procedure Paint; override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure StopSizing; override;
     procedure Click; override;
+    procedure Resize; override;
     // new handlers
     procedure MouseEnter; virtual;
     procedure MouseLeave; virtual;
+  public
     // new methods
     procedure Toggle;
     procedure SetImages(ImageShown: TImage; ImageHidden: TImage = nil);
 
     property HotColor: TColor read FHotColor write FHotColor;
     property ToggleControl: TControl read FToggleControl write FToggleControl;
+    property ResizeControl: TControl read FResizeControl write FResizeControl;
     property DenyDrag: Boolean read FDenyDrag write FDenyDrag;
   end;
 
 implementation
+
+const
+  S_Err_ToggleControlNotAssigned = 'ToggleControl not assigned';
 
 function Max(const A, B: Integer): Integer;
 begin
@@ -59,12 +94,14 @@ end;
 type
   TOrientation = (oVert, oHorz);
 
+// Get control position point and dimension depending on orientation
+
 function GetCtrlSize(Orient: TOrientation; Control: TControl): Integer;
 begin
   case Orient of
     oVert: Result := Control.Width;
     oHorz: Result := Control.Height;
-    else raise TObject.Create;
+    else raise Exception.Create(''); // compiler happy
   end;
 end;
 
@@ -81,7 +118,7 @@ begin
   case Orient of
     oVert: Result := Control.Left;
     oHorz: Result := Control.Top;
-    else raise TObject.Create;
+    else raise Exception.Create(''); // compiler happy
   end;
 end;
 
@@ -100,12 +137,16 @@ var
   Orient: TOrientation;
   CurrSize: Integer;
 begin
+  if FToggleControl = nil then
+    raise Exception.Create(S_Err_ToggleControlNotAssigned);
+
   // Determine orientation (copy from VCL)
   if Align in [alBottom, alTop] then
     Orient := oHorz
   else
     Orient := oVert;
 
+  LockWindowUpdate(Self.Parent.Handle); // avoid flickering
   // Control is hidden:
   //   Set size
   //   Set positions of splitter and control to revert align order (!)
@@ -113,9 +154,14 @@ begin
   begin
     // New size
     CurrSize := Max(FSaveControlSize, MinSize);
-    if FToggleControl.Align = alClient then
-      SetCtrlSize(Orient, Parent, GetCtrlSize(Orient, Parent) + CurrSize)
-    else
+    // If ResizeControl specified, resize it
+    if FResizeControl <> nil then
+      SetCtrlSize(Orient, FResizeControl, GetCtrlSize(Orient, FResizeControl) + CurrSize)
+    // If Control's Align is alClient, it's no sense in resizing. So resize its Parent
+    else if FToggleControl.Align = alClient then
+      SetCtrlSize(Orient, FResizeControl, GetCtrlSize(Orient, FResizeControl) + CurrSize);
+    // Resize the control
+    if FToggleControl.Align <> alClient then
       SetCtrlSize(Orient, FToggleControl, CurrSize);
     SetCtrlPos(Orient, Self, FSavePos);
     SetCtrlPos(Orient, FToggleControl, FSaveControlPos);
@@ -129,11 +175,18 @@ begin
     FSaveControlSize := GetCtrlSize(Orient, FToggleControl);
     FSaveControlPos := GetCtrlPos(Orient, FToggleControl);
     FSavePos := GetCtrlPos(Orient, Self);
-    if FToggleControl.Align = alClient then
-      SetCtrlSize(Orient, Parent, GetCtrlSize(Orient, Parent) - FSaveControlSize)
-    else
+    // If ResizeControl specified, resize it
+    if FResizeControl <> nil then
+      SetCtrlSize(Orient, FResizeControl, GetCtrlSize(Orient, FResizeControl) - FSaveControlSize)
+    // If Control's Align is alClient, it's no sense in resizing. So resize its Parent
+    else if FToggleControl.Align = alClient then
+      SetCtrlSize(Orient, Parent, GetCtrlSize(Orient, Parent) - FSaveControlSize);
+    // Resize the control
+    if FToggleControl.Align <> alClient then
       SetCtrlSize(Orient, FToggleControl, 0);
   end;
+  LockWindowUpdate(0);
+
   FControlHidden := not FControlHidden;
   // Refresh, call OnMoved
   StopSizing;
@@ -223,10 +276,7 @@ begin
   FImages[True] := ImageHidden;
   if FImages[True] = nil then
     FImages[True] := FImages[False];
-  FClickArea.Left := (ClientWidth - ImageShown.Width) div 2;
-  FClickArea.Top := (ClientHeight - ImageShown.Height) div 2;
-  FClickArea.Right := FClickArea.Left + ImageShown.Width;
-  FClickArea.Bottom := FClickArea.Top + ImageShown.Height;
+  CalcClickArea;
 end;
 
 // Re-determine FControlHidden flag (otherwise it could be missed by dragging from hidden state)
@@ -234,6 +284,8 @@ procedure TSplitterEx.StopSizing;
 var Orient: TOrientation;
 begin
   inherited;
+  if FToggleControl = nil then
+    raise Exception.Create(S_Err_ToggleControlNotAssigned);
 
   // Determine orientation (copy from VCL)
   if Align in [alBottom, alTop] then
@@ -242,6 +294,23 @@ begin
     Orient := oVert;
 
   FControlHidden := (GetCtrlSize(Orient, FToggleControl) = 0);
+end;
+
+// Calculate position of click image
+procedure TSplitterEx.CalcClickArea;
+begin
+  if FImages[False] = nil then Exit;
+  FClickArea.Left := (ClientWidth - FImages[False].Width) div 2;
+  FClickArea.Top := (ClientHeight - FImages[False].Height) div 2;
+  FClickArea.Right := FClickArea.Left + FImages[False].Width;
+  FClickArea.Bottom := FClickArea.Top + FImages[False].Height;
+end;
+
+// Recalculate position of click image on resize
+procedure TSplitterEx.Resize;
+begin
+  inherited;
+  CalcClickArea;
 end;
 
 end.
