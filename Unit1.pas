@@ -34,6 +34,10 @@ type
     Panel14: TPanel;
     Panel15: TPanel;
     Image3: TImage;
+    Panel16: TPanel;
+    Splitter6: TSplitter;
+    Panel17: TPanel;
+    Panel18: TPanel;
     procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
@@ -62,6 +66,12 @@ begin
   Splitter5.ToggleControl := Panel15;
   Splitter5.DenyDrag := True;
   Splitter5.HotColor := clHotLight;
+
+  Splitter6.SetImages(Image3, Image1);
+  Splitter6.ToggleControl := Panel18;
+  Splitter6.ResizeControl := Panel16;
+  Splitter6.DenyDrag := True;
+  Splitter6.HotColor := clHotLight;
 
   Splitter3.SetImages(Image2);
   Splitter3.ToggleControl := Panel8;

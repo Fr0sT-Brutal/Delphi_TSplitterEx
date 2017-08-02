@@ -1,8 +1,8 @@
 object Form1: TForm1
-  Left = 527
-  Top = 369
-  Width = 971
-  Height = 522
+  Left = 533
+  Top = 141
+  Width = 1264
+  Height = 517
   Caption = 'Form1'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,8 +15,8 @@ object Form1: TForm1
   PixelsPerInch = 96
   TextHeight = 13
   object Image1: TImage
-    Left = 928
-    Top = 8
+    Left = 632
+    Top = 232
     Width = 7
     Height = 161
     AutoSize = True
@@ -283,8 +283,8 @@ object Form1: TForm1
     Visible = False
   end
   object Image3: TImage
-    Left = 944
-    Top = 8
+    Left = 648
+    Top = 232
     Width = 7
     Height = 161
     AutoSize = True
@@ -416,8 +416,8 @@ object Form1: TForm1
   end
   object Panel1: TPanel
     Left = 16
-    Top = 8
-    Width = 297
+    Top = 9
+    Width = 289
     Height = 200
     TabOrder = 0
     object Splitter1: TSplitter
@@ -438,7 +438,7 @@ object Form1: TForm1
     object Panel3: TPanel
       Left = 212
       Top = 1
-      Width = 84
+      Width = 76
       Height = 198
       Align = alClient
       Caption = 'no toggle'
@@ -571,6 +571,38 @@ object Form1: TForm1
       Height = 198
       Align = alClient
       Caption = 'toggle with parent resize'
+      TabOrder = 1
+    end
+  end
+  object Panel16: TPanel
+    Left = 928
+    Top = 8
+    Width = 313
+    Height = 200
+    TabOrder = 5
+    object Splitter6: TSplitter
+      Left = 133
+      Top = 1
+      Width = 11
+      Height = 198
+      Align = alRight
+    end
+    object Panel17: TPanel
+      Left = 1
+      Top = 1
+      Width = 132
+      Height = 198
+      Align = alClient
+      Caption = 'no toggle'
+      TabOrder = 0
+    end
+    object Panel18: TPanel
+      Left = 144
+      Top = 1
+      Width = 168
+      Height = 198
+      Align = alRight
+      Caption = 'toggle with Align <> alClient'
       TabOrder = 1
     end
   end
